@@ -1,5 +1,7 @@
 这里是合宙模组 luat 方式接入 [ThingsCloud](https://www.thingscloud.xyz/) 云平台的 lib 库，以及示例代码。
 
+支持 Air720UG/UH、Air724UG、Air722UG、Air820UG。
+
 ## 实现功能
 
 该代码库面向对合宙luat开发框架有一定的掌握的硬件开发者。通过封装良好的 lib 库，5分钟即可将模组接入 ThingsCloud 云平台，实现以下功能：
