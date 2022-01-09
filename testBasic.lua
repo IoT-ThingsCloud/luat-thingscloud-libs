@@ -39,7 +39,7 @@ local function onAttributesPush(attributes)
 end
 
 -- 设备接收到云平台下发的命令时，触发该函数
-local function onCommandRecv(command)
+local function onCommandSend(command)
     log.info("recv command send", json.encode(command))
     if command.method == "ota" then
         sys.taskInit(
@@ -73,7 +73,7 @@ end
 -- 设备向云平台发送读取云端属性后，接收到云平台下发的命令时，触发该函数
 -- attributes 是table结构的属性JSON数据
 -- responseId 作为请求标识，通常可以不使用
-local function onAttributesResponse(attributes, responseId)
+local function onAttributesGetResponse(attributes, responseId)
     log.info("attributes get response", json.encode(attributes), responseId)
 
     if attributes.config_value1 then
@@ -113,8 +113,8 @@ sys.taskInit(
         -- 注册各类事件的回调函数，在回调函数中编写所需的硬件端操作逻辑
         thingsCloud.on("connect", onConnect)
         thingsCloud.on("attributes_push", onAttributesPush)
-        thingsCloud.on("attributes_get_response", onAttributesResponse)
-        thingsCloud.on("command_send", onCommandRecv)
+        thingsCloud.on("attributes_get_response", onAttributesGetResponse)
+        thingsCloud.on("command_send", onCommandSend)
     end
 )
 
