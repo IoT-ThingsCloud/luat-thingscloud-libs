@@ -151,8 +151,8 @@ sys.taskInit(
             -- thingsCloud.publishCustomTopic("custom", "test")
             end
             -- 上报间隔时间为5秒，接入云平台试用版时
-            -- 请勿低于5秒，否则会被丢失甚至断开连接，造成设备通信不稳定
-            sys.wait(5000)
+            -- 使用 ThingsCloud 免费版时，数据上报频率不要低于1分钟，否则可能会被断开连接，造成设备通信不稳定
+            sys.wait(1000 * 60)
         end
     end
 )
