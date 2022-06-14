@@ -1,6 +1,5 @@
 -- 合宙模组 luat 接入 ThingsCloud 云平台的代码库
 -- ThingsCloud MQTT 接入文档：https://docs.thingscloud.xyz/guide/connect-device/mqtt.html
-
 require "log"
 require "http"
 require "mqtt"
@@ -10,8 +9,11 @@ module(..., package.seeall)
 local projectKey = "" -- project_key
 local accessToken = "" -- access_token
 local host, port = "", 1883
+local apiEndpoint = "" -- api endpoint
 local mqttc = nil
 local connected = false
+local certFetchRetryMax = 5
+local certFetchRetryCnt = 0
 
 local SUBSCRIBE_PREFIX = {
     ATTRIBUTES_GET_REPONSE = "attributes/get/response/",
@@ -93,18 +95,64 @@ local function mqttConnect()
 end
 
 function connect(param)
+    if not param.host or not param.projectKey then
+        logger.info("host or projectKey not found")
+        return
+    end
     host = param.host
     projectKey = param.projectKey
-    accessToken = param.accessToken
-    sys.taskInit(
-        function()
+    if param.accessToken then
+        accessToken = param.accessToken
+        sys.taskInit(function()
             while not socket.isReady() do
                 logger.info("wait socket ready...")
                 sys.wait(2000)
             end
             sys.taskInit(procConnect)
+        end)
+    else
+        if not param.apiEndpoint then
+            logger.info("apiEndpoint not found")
+            return
         end
-    )
+        apiEndpoint = param.apiEndpoint
+        sys.taskInit(function()
+            while not socket.isReady() do
+                logger.info("wait socket ready...")
+                sys.wait(2000)
+            end
+            sys.taskInit(fetchDeviceCert)
+        end)
+    end
+end
+
+-- 一型一密，使用IMEI作为DeviceKey，领取设备证书AccessToken
+function fetchDeviceCert()
+    local header = {}
+    header["Project-Key"] = projectKey
+    header["Content-Type"] = "application/json"
+    local url = apiEndpoint .. "/device/v1/certificate"
+    local device_key = misc.getImei()
+    http.request("POST", url, nil, header, json.encode({
+        device_key = device_key
+    }), 3000, function(result, prompt, head, body)
+        log.info("http fetch cert:", device_key, result, prompt, head, body)
+        if result and prompt == "200" then
+            local data = json.decode(body)
+            if data.result == 1 then
+                local device = data.device
+                accessToken = device.access_token
+                procConnect()
+                return
+            end
+        end
+        if certFetchRetryCnt < certFetchRetryMax then
+            -- 重试
+            certFetchRetryCnt = certFetchRetryCnt + 1
+            sys.wait(1000 * 10)
+            fetchDeviceCert()
+        end
+    end)
 end
 
 function procConnect()
@@ -123,10 +171,8 @@ function procConnect()
         local result, data, param = mqttc:receive(100, "pub_msg")
         if result then
             logger.info("mqtt:receive", data.topic or nil, data.payload or "nil")
-            if
-                (data.topic:sub(1, SUBSCRIBE_PREFIX.ATTRIBUTES_GET_REPONSE:len()) ==
-                    SUBSCRIBE_PREFIX.ATTRIBUTES_GET_REPONSE)
-             then
+            if (data.topic:sub(1, SUBSCRIBE_PREFIX.ATTRIBUTES_GET_REPONSE:len()) ==
+                SUBSCRIBE_PREFIX.ATTRIBUTES_GET_REPONSE) then
                 local response = json.decode(data.payload)
                 local responseId = tonumber(data.topic:sub(SUBSCRIBE_PREFIX.ATTRIBUTES_GET_REPONSE:len() + 1))
                 cb("attributes_get_response", response, responseId)
@@ -138,10 +184,8 @@ function procConnect()
                 if response.method and response.params then
                     cb("command_send", response)
                 end
-            elseif
-                (data.topic:sub(1, SUBSCRIBE_PREFIX.COMMAND_REPLY_RESPONSE:len()) ==
-                    SUBSCRIBE_PREFIX.COMMAND_REPLY_RESPONSE)
-             then
+            elseif (data.topic:sub(1, SUBSCRIBE_PREFIX.COMMAND_REPLY_RESPONSE:len()) ==
+                SUBSCRIBE_PREFIX.COMMAND_REPLY_RESPONSE) then
                 local response = json.decode(data.payload)
                 local replyId = tonumber(data.topic:sub(SUBSCRIBE_PREFIX.COMMAND_REPLY_RESPONSE:len() + 1))
                 cb("command_reply_response", response, replyId)
@@ -171,56 +215,57 @@ function procConnect()
 end
 
 function reportAttributes(tableData)
-    table.insert(QUEUE.PUBLISH, {topic = "attributes", data = json.encode(tableData)})
+    table.insert(QUEUE.PUBLISH, {
+        topic = "attributes",
+        data = json.encode(tableData)
+    })
     sys.publish("QUEUE_PUBLISH", "ATTRIBUTES")
 end
 
 function getAttributes(attrsList, options)
     options = options or {}
     options.getId = options.getId or 1000
-    table.insert(
-        QUEUE.PUBLISH,
-        {
-            topic = "attributes/get/" .. tostring(options.getId),
-            data = json.encode(
-                {
-                    keys = attrsList
-                }
-            )
-        }
-    )
+    table.insert(QUEUE.PUBLISH, {
+        topic = "attributes/get/" .. tostring(options.getId),
+        data = json.encode({
+            keys = attrsList
+        })
+    })
 end
 
 function reportEvent(event, options)
     options = options or {}
     options.eventId = options.eventId or 1000
-    table.insert(QUEUE.PUBLISH, {topic = "event/report/" .. tostring(options.eventId), data = json.encode(event)})
+    table.insert(QUEUE.PUBLISH, {
+        topic = "event/report/" .. tostring(options.eventId),
+        data = json.encode(event)
+    })
 end
 
 function replyCommand(commandReply, options)
     options = options or {}
     options.replyId = options.replyId or 1000
-    table.insert(
-        QUEUE.PUBLISH,
-        {topic = "command/reply/" .. tostring(options.replyId), data = json.encode(commandReply)}
-    )
+    table.insert(QUEUE.PUBLISH, {
+        topic = "command/reply/" .. tostring(options.replyId),
+        data = json.encode(commandReply)
+    })
 end
 
 function publishCustomTopic(identifier, data, options)
     if type(identifier) ~= "string" then
         return
     end
-    table.insert(QUEUE.PUBLISH, {topic = "data/" .. identifier, data = data})
+    table.insert(QUEUE.PUBLISH, {
+        topic = "data/" .. identifier,
+        data = data
+    })
 end
 
 function split(str, sep)
     local sep, fields = sep or ":", {}
     local pattern = string.format("([^%s]+)", sep)
-    str:gsub(
-        pattern,
-        function(c)
-            fields[#fields + 1] = c
-        end
-    )
+    str:gsub(pattern, function(c)
+        fields[#fields + 1] = c
+    end)
     return fields
 end
