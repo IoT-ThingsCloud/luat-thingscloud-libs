@@ -54,12 +54,12 @@ local function cb(eType, ...)
     logger.info("cb", eType, ...)
 end
 
-local function subscribe(topic)
+function subscribe(topic)
     logger.info("subscribe", topic)
     mqttc:subscribe(topic)
 end
 
-local function publish(topic, data)
+function publish(topic, data)
     logger.info("publish", topic, data)
     mqttc:publish(topic, data)
 end
