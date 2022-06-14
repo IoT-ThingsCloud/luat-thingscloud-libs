@@ -15,10 +15,17 @@
 - [ThingsCloud MQTT 接入文档](https://docs.thingscloud.xyz/guide/connect-device/mqtt.html)
 - [ThingsCloud 控制台](https://www.thingscloud.xyz/)
 
+## 使用方法
+
+### 安装
+
+所有接口都封装在 `thingsCloud.lua` 这一个文件中，只需将 `thingsCloud.lua` 复制到自己的工程项目中，或放置在主程序可以找到的通用库路径下。
+
+### 使用
 
 ## 快速运行示例
 
-### testBasic
+### examples/basic_connect
 
 使用 luatools 或 VSCode LuatIDE，将以下脚本文件烧录到模组。
 
@@ -31,14 +38,19 @@
 `testBasic.lua` 是示例程序，展示了基本用法，只需修改以下部分即可运行。
 
 ```lua
--- 以下复制设备证书和MQTT接入点地址，在设备详情页的【连接】页面可以找到。请勿泄露设备证书。
+-- 登录 ThingsCloud: https://console.thingscloud.xyz/
+-- 复制设备证书和MQTT接入点地址，在设备详情页的【连接】页面可以找到。请勿泄露设备证书。
+-- 以下请根据自己的项目修改为实际值
+--------------------------------------------------------//
 -- ProjectKey
 local projectKey = ""
 -- AccessToken
 local accessToken = ""
--- MQTT 接入点，只需主机名部分
-local host = "bj-3-mqtt.iot-api.com"
+-- MQTT 接入点，只需主机名部分。
+local mqttHost = ""
+--------------------------------------------------------//
 ```
+
 在 ThingsCloud 云平台创建设备后，在设备详情页的【连接】页面可以找到证书和MQTT接入点，如下：
 
 ![image](https://user-images.githubusercontent.com/97299260/148683169-b5ef8f41-0960-4298-8269-2b792179e8f2.png)
@@ -63,3 +75,34 @@ local host = "bj-3-mqtt.iot-api.com"
 
 ![image](https://user-images.githubusercontent.com/97299260/148683123-487cdfc8-9615-42c7-a5b6-b18e936b94fc.png)
 
+### examples/fetch_certificate
+
+这是一型一密的示例程序，使用 luatools 或 VSCode LuatIDE，将以下脚本文件烧录到模组。
+
+- `main.lua`
+- `testBasic.lua` 
+- `thingsCloud.lua`
+
+`thingsCloud.lua` 是 lib 库文件，无需修改。
+
+`testBasic.lua` 是示例程序，展示了基本用法，只需修改以下部分即可运行。
+
+```lua
+-- 登录 ThingsCloud: https://console.thingscloud.xyz/
+-- 复制设备证书和MQTT接入点地址，在设备详情页的【连接】页面可以找到。请勿泄露设备证书。
+-- 以下请根据自己的项目修改为实际值
+--------------------------------------------------------//
+-- ProjectKey
+local projectKey = ""
+-- MQTT 接入点，只需主机名部分。请根据自己的项目修改为实际值
+local mqttHost = ""
+-- API 接入点，用来请求设备证书。请根据自己的项目修改为实际值
+local apiEndpoint = ""
+--------------------------------------------------------//
+
+```
+
+设备启动后，会先使用模组的 IMEI 向云平台请求设备证书。
+
+- 需要先在云平台预注册设备，将IMEI填写到设备唯一标识中。
+- 如不希望预注册，ThingsCloud 也支持自动创建设备，需在设备类型中开启该选择。
