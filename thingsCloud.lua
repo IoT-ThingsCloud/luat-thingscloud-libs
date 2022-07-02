@@ -8,6 +8,7 @@ module(..., package.seeall)
 
 local projectKey = "" -- project_key
 local accessToken = "" -- access_token
+local typeKey = "" -- type_key
 local host, port = "", 1883
 local apiEndpoint = "" -- api endpoint
 local mqttc = nil
@@ -57,11 +58,17 @@ local function cb(eType, ...)
 end
 
 function subscribe(topic)
+    if not connected then
+        return
+    end
     logger.info("subscribe", topic)
     mqttc:subscribe(topic)
 end
 
 function publish(topic, data)
+    if not connected then
+        return
+    end
     logger.info("publish", topic, data)
     mqttc:publish(topic, data)
 end
@@ -101,6 +108,7 @@ function connect(param)
     end
     host = param.host
     projectKey = param.projectKey
+    
     if param.accessToken then
         accessToken = param.accessToken
         sys.taskInit(function()
@@ -116,6 +124,9 @@ function connect(param)
             return
         end
         apiEndpoint = param.apiEndpoint
+        if param.typeKey ~= "" or param.typeKey ~= nil then
+            typeKey = param.typeKey
+        end
         sys.taskInit(function()
             while not socket.isReady() do
                 logger.info("wait socket ready...")
@@ -132,11 +143,12 @@ function fetchDeviceCert()
     header["Project-Key"] = projectKey
     header["Content-Type"] = "application/json"
     local url = apiEndpoint .. "/device/v1/certificate"
-    local device_key = misc.getImei()
+    local deviceKey = misc.getImei()
     http.request("POST", url, nil, header, json.encode({
-        device_key = device_key
+        device_key = deviceKey,
+        type_key = typeKey
     }), 3000, function(result, prompt, head, body)
-        log.info("http fetch cert:", device_key, result, prompt, head, body)
+        log.info("http fetch cert:", deviceKey, result, prompt, head, body)
         if result and prompt == "200" then
             local data = json.decode(body)
             if data.result == 1 then
@@ -162,7 +174,7 @@ function procConnect()
         return
     end
     while true do
-        while #QUEUE.PUBLISH > 0 do
+        if #QUEUE.PUBLISH > 0 then
             local item = table.remove(QUEUE.PUBLISH, 1)
             if publish(item.topic, item.data) then
             end
@@ -214,51 +226,50 @@ function procConnect()
     end
 end
 
-function reportAttributes(tableData)
+function insertPublishQueue(topic, data)
+    if not connected then
+        return
+    end
     table.insert(QUEUE.PUBLISH, {
-        topic = "attributes",
-        data = json.encode(tableData)
+        topic = topic,
+        data = data
     })
+end
+
+function reportAttributes(tableData)
+    insertPublishQueue("attributes", json.encode(tableData))
     sys.publish("QUEUE_PUBLISH", "ATTRIBUTES")
 end
 
 function getAttributes(attrsList, options)
     options = options or {}
     options.getId = options.getId or 1000
-    table.insert(QUEUE.PUBLISH, {
-        topic = "attributes/get/" .. tostring(options.getId),
-        data = json.encode({
-            keys = attrsList
-        })
-    })
+    insertPublishQueue("attributes/get/" .. tostring(options.getId), json.encode({
+        keys = attrsList
+    }))
 end
 
 function reportEvent(event, options)
     options = options or {}
     options.eventId = options.eventId or 1000
-    table.insert(QUEUE.PUBLISH, {
-        topic = "event/report/" .. tostring(options.eventId),
-        data = json.encode(event)
-    })
+    insertPublishQueue("event/report/" .. tostring(options.eventId), json.encode(event))
 end
 
 function replyCommand(commandReply, options)
     options = options or {}
     options.replyId = options.replyId or 1000
-    table.insert(QUEUE.PUBLISH, {
-        topic = "command/reply/" .. tostring(options.replyId),
-        data = json.encode(commandReply)
-    })
+    insertPublishQueue("command/reply/" .. tostring(options.replyId), json.encode(commandReply))
 end
 
 function publishCustomTopic(identifier, data, options)
     if type(identifier) ~= "string" then
         return
     end
-    table.insert(QUEUE.PUBLISH, {
-        topic = "data/" .. identifier,
-        data = data
-    })
+    insertPublishQueue("data/" .. identifier, data)
+end
+
+function getAccessToken()
+    return accessToken
 end
 
 function split(str, sep)
