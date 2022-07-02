@@ -150,7 +150,7 @@ sys.taskInit(
             -- 使用自定义 topic 上报数据，必须在设备类型中创建自定义数据流
             -- thingsCloud.publishCustomTopic("custom", "test")
             end
-            -- 上报间隔时间为5秒，接入云平台试用版时
+            -- 上报间隔时间为60秒
             -- 使用 ThingsCloud 免费版时，数据上报频率不要低于1分钟，否则可能会被断开连接，造成设备通信不稳定
             sys.wait(1000 * 60)
         end
