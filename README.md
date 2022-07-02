@@ -102,7 +102,45 @@ local apiEndpoint = ""
 
 ```
 
-设备启动后，会先使用模组的 IMEI 向云平台请求设备证书。
+设备启动后，会先使用模组的 IMEI 作为设备唯一标识 `DeviceKey` ，向云平台请求设备证书。
 
 - 需要先在云平台预注册设备，将IMEI填写到设备唯一标识中。
-- 如不希望预注册，ThingsCloud 也支持自动创建设备，需在设备类型中开启该选择。
+- 如不希望预注册，而是当设备请求证书时自动创建设备，请使用下边的示例。
+
+
+### examples/fetch_certificate_auto_create
+
+这是在一型一密 `examples/fetch_certificate` 的基础上，支持自动创建设备。
+
+使用 luatools 或 VSCode LuatIDE，将以下脚本文件烧录到模组。
+
+- `main.lua`
+- `testBasic.lua` 
+- `thingsCloud.lua`
+
+`thingsCloud.lua` 是 lib 库文件，无需修改。
+
+`testBasic.lua` 是示例程序，展示了基本用法，只需修改以下部分即可运行。
+
+```lua
+-- 登录 ThingsCloud: https://console.thingscloud.xyz/
+-- 复制设备证书和MQTT接入点地址，在设备详情页的【连接】页面可以找到。请勿泄露设备证书。
+-- 以下请根据自己的项目修改为实际值
+--------------------------------------------------------//
+-- ProjectKey
+local projectKey = ""
+-- TypeKey
+local typeKey = ""
+-- MQTT 接入点，只需主机名部分。请根据自己的项目修改为实际值
+local mqttHost = ""
+-- API 接入点，用来请求设备证书。请根据自己的项目修改为实际值
+local apiEndpoint = ""
+--------------------------------------------------------//
+
+```
+
+设备启动后，会先使用模组的 IMEI 作为设备唯一标识 `DeviceKey` ，向云平台请求设备证书。如果该设备不存在，则会自动创建新设备。
+
+- 需要先在 ThingsCloud 控制台中创建设备类型，拿到设备类型的 `TypeKey`，自动创建的设备将关联到该设备类型。
+- 同时还需要在设备类型的设置中，开启【允许自动创建新设备】。
+- 当然，还要确保项目中未达到设备数上限，如果超过，需要购买付费版扩容。
