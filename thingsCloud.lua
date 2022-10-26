@@ -13,6 +13,8 @@ local host, port = "", 1883
 local apiEndpoint = "" -- api endpoint
 local mqttc = nil
 local connected = false
+local deviceInfo = {}
+
 local certFetchRetryMax = 5
 local certFetchRetryCnt = 0
 
@@ -21,7 +23,9 @@ local SUBSCRIBE_PREFIX = {
     ATTRIBUTES_PUSH = "attributes/push",
     COMMAND_SEND = "command/send/",
     COMMAND_REPLY_RESPONSE = "command/reply/response/",
-    DATA_SET = "data/"
+    DATA_SET = "data/",
+    GW_ATTRIBUTES_PUSH = "gateway/attributes/push",
+    GW_COMMAND_SEND = "gateway/command/send"
 }
 local EVENT_TYPES = {
     connect = true,
@@ -30,7 +34,9 @@ local EVENT_TYPES = {
     attributes_push = true,
     command_send = true,
     command_reply_response = true,
-    data_set = true
+    data_set = true,
+    gw_attributes_push = true,
+    gw_command_send = true
 }
 local CALLBACK = {}
 local QUEUE = {
@@ -57,33 +63,13 @@ local function cb(eType, ...)
     logger.info("cb", eType, ...)
 end
 
-function subscribe(topic)
-    if not connected then
-        return
-    end
-    logger.info("subscribe", topic)
-    mqttc:subscribe(topic)
-end
-
-function publish(topic, data)
-    if not connected then
-        return
-    end
-    logger.info("publish", topic, data)
-    mqttc:publish(topic, data)
-end
-
-function isConnected()
-    return connected
-end
-
 local function mqttConnect()
     local retryCount = 0
     logger.info("thingscloud connecting...")
     while not mqttc:connect(host, port) do
         -- 重试连接
         logger.info("mqtt reconnecting...")
-        sys.wait(5000)
+        sys.wait(1000 * 10)
         retryCount = retryCount + 1
         if (retryCount > 5) then
             cb("connect", false)
@@ -108,7 +94,7 @@ function connect(param)
     end
     host = param.host
     projectKey = param.projectKey
-    
+
     if param.accessToken then
         accessToken = param.accessToken
         sys.taskInit(function()
@@ -152,8 +138,8 @@ function fetchDeviceCert()
         if result and prompt == "200" then
             local data = json.decode(body)
             if data.result == 1 then
-                local device = data.device
-                accessToken = device.access_token
+                deviceInfo = data.device
+                accessToken = deviceInfo.access_token
                 procConnect()
                 return
             end
@@ -176,7 +162,9 @@ function procConnect()
     while true do
         if #QUEUE.PUBLISH > 0 then
             local item = table.remove(QUEUE.PUBLISH, 1)
-            if publish(item.topic, item.data) then
+            logger.info("publish", item.topic, item.data)
+            if mqttc:publish(item.topic, item.data) then
+                -- 
             end
         end
 
@@ -207,6 +195,12 @@ function procConnect()
                     local identifier = tmp[2]
                     cb("data_set", data.payload)
                 end
+            elseif (data.topic == SUBSCRIBE_PREFIX.GW_ATTRIBUTES_PUSH) then
+                local response = json.decode(data.payload)
+                cb("gw_attributes_push", response)
+            elseif (data.topic == SUBSCRIBE_PREFIX.GW_COMMAND_SEND) then
+                local response = json.decode(data.payload)
+                cb("gw_command_send", response)
             end
         elseif data == "pub_msg" then
         elseif data == "timeout" then
@@ -226,7 +220,11 @@ function procConnect()
     end
 end
 
-function insertPublishQueue(topic, data)
+function isConnected()
+    return connected
+end
+
+local function insertPublishQueue(topic, data)
     if not connected then
         return
     end
@@ -234,6 +232,18 @@ function insertPublishQueue(topic, data)
         topic = topic,
         data = data
     })
+end
+
+function subscribe(topic)
+    if not connected then
+        return
+    end
+    logger.info("subscribe", topic)
+    mqttc:subscribe(topic)
+end
+
+function publish(topic, data)
+    insertPublishQueue(topic, data)
 end
 
 function reportAttributes(tableData)
@@ -244,9 +254,13 @@ end
 function getAttributes(attrsList, options)
     options = options or {}
     options.getId = options.getId or 1000
-    insertPublishQueue("attributes/get/" .. tostring(options.getId), json.encode({
+    local data = {
         keys = attrsList
-    }))
+    }
+    if #attrsList == 0 then
+        data = {}
+    end
+    insertPublishQueue("attributes/get/" .. tostring(options.getId), json.encode(data))
 end
 
 function reportEvent(event, options)
@@ -270,6 +284,13 @@ end
 
 function getAccessToken()
     return accessToken
+end
+
+function isGateway()
+    if deviceInfo.conn_type == "3" then
+        return true
+    end
+    return false
 end
 
 function split(str, sep)
