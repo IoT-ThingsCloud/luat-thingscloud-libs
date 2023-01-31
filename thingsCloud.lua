@@ -125,6 +125,10 @@ function connect(param)
     end
 end
 
+function disconnect() 
+    mqttc:disconnect()
+end
+
 -- 一型一密，使用IMEI作为DeviceKey，领取设备证书AccessToken
 function fetchDeviceCert()
     local header = {}
@@ -210,13 +214,13 @@ function procConnect()
             elseif data == "CLOSED" then
                 -- connected = false
                 -- logger.info("mqtt closed")
-                -- mqttc:disconnect()
+                -- disconnect()
                 -- sys.wait(3000)
                 -- mqttConnect()
             else
                 connected = false
                 logger.info("mqtt disconnected")
-                mqttc:disconnect()
+                disconnect()
                 sys.wait(3000)
                 mqttConnect()
             end
