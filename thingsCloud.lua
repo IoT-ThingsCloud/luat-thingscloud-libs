@@ -79,12 +79,14 @@ local function mqttConnect()
     connected = true
     logger.info("thingscloud connected")
 
-    cb("connect", true)
-
     subscribe("attributes/push")
     subscribe("attributes/get/response/+")
     subscribe("command/send/+")
     subscribe("command/reply/response/+")
+
+    sys.taskInit(function()
+        cb("connect", true)
+    end)
 end
 
 function connect(param)
@@ -202,20 +204,22 @@ function procConnect()
                 local response = json.decode(data.payload)
                 cb("gw_command_send", response)
             end
-        elseif data == "pub_msg" then
-        elseif data == "timeout" then
-        elseif data == "CLOSED" then
-            connected = false
-            logger.info("mqtt closed")
-            mqttc:disconnect()
-            sys.wait(3000)
-            mqttConnect()
         else
-            connected = false
-            logger.info("mqtt disconnected")
-            mqttc:disconnect()
-            sys.wait(3000)
-            mqttConnect()
+            if data == "pub_msg" then
+            elseif data == "timeout" then
+            elseif data == "CLOSED" then
+                -- connected = false
+                -- logger.info("mqtt closed")
+                -- mqttc:disconnect()
+                -- sys.wait(3000)
+                -- mqttConnect()
+            else
+                connected = false
+                logger.info("mqtt disconnected")
+                mqttc:disconnect()
+                sys.wait(3000)
+                mqttConnect()
+            end
         end
     end
 end
