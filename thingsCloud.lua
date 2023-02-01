@@ -84,9 +84,7 @@ local function mqttConnect()
     subscribe("command/send/+")
     subscribe("command/reply/response/+")
 
-    sys.taskInit(function()
-        cb("connect", true)
-    end)
+    cb("connect", true)
 end
 
 function connect(param)
@@ -125,7 +123,7 @@ function connect(param)
     end
 end
 
-function disconnect() 
+function disconnect()
     mqttc:disconnect()
 end
 
