@@ -28,6 +28,7 @@ local SUBSCRIBE_PREFIX = {
     GW_COMMAND_SEND = "gateway/command/send"
 }
 local EVENT_TYPES = {
+    fetch_cert = true,
     connect = true,
     attributes_report_response = true,
     attributes_get_response = true,
@@ -142,6 +143,9 @@ function fetchDeviceCert()
         if result and prompt == "200" then
             local data = json.decode(body)
             if data.result == 1 then
+                sys.taskInit(function()
+                    cb("fetch_cert", true)
+                end)
                 deviceInfo = data.device
                 accessToken = deviceInfo.access_token
                 procConnect()
@@ -153,6 +157,8 @@ function fetchDeviceCert()
             certFetchRetryCnt = certFetchRetryCnt + 1
             sys.wait(1000 * 10)
             fetchDeviceCert()
+        else
+            cb("fetch_cert", false)
         end
     end)
 end
