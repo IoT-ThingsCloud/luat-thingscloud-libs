@@ -145,3 +145,37 @@ local apiEndpoint = ""
 - 需要先在 ThingsCloud 控制台中创建设备类型，拿到设备类型的 `TypeKey`，自动创建的设备将关联到该设备类型。
 - 同时还需要在设备类型的设置中，开启【允许自动创建新设备】。
 - 当然，还要确保项目中未达到设备数上限，如果超过，需要购买付费版扩容。
+
+
+
+
+## 关于 ThingsCloud
+
+ThingsCloud 是物联网设备统一接入平台和低代码应用开发平台。可以帮助任何需要数字化改造的行业客户，在极短的时间内搭建物联网应用，并适应不断变化的发展需求。ThingsCloud 支持智能传感器、执行器、控制器、智能硬件等设备接入，支持 MQTT/HTTP/TCP/Modbus/LoRa/Zigbee/WiFi/BLE 等通信协议，实现数据采集、分析、监控，还可以灵活配置各种规则，生成项目应用 SaaS 和用户应用 App，这一切无需任何云端代码开发。
+
+- 官网：https://www.thingscloud.xyz/
+- 控制台：https://console.thingscloud.xyz/
+- 教程：https://docs.thingscloud.xyz/tutorials/
+- 使用文档：https://docs.thingscloud.xyz
+- 设备接入：https://docs.thingscloud.xyz/guide/connect-device/
+- 博客：https://www.thingscloud.xyz/blog/
+- B站：https://space.bilibili.com/1953347444
+
+
+![articles/2023/20230112114634_afd61232cd029fca77eaebe67e12beaf.png](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230112114634_afd61232cd029fca77eaebe67e12beaf.png)
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230303162529_7d47018b2466053ef3af13dcfd23b703.png)
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230303194054_fe9320028f7b499a18893b7a0d25b3c7.png)
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230303163508_4b2e3b2052e282bcf2e36143fe90d101.png)
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230303164617_c0f98e1ae66b5987aba3408faf86ac1d.png)
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/articles/2023/20230303163103_40fe1d013e8d1d665bdd3cd0ae42adc0.png)
+
+### 技术支持
+
+联系 ThingsCloud 技术支持
+
+![](https://img-1300291923.cos.ap-beijing.myqcloud.com/service/support-qrcode-wlww-1208.png)
